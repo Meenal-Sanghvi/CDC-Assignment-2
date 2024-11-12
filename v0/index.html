@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Advanced Todo App</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f5f5f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 1rem;
+        }
+        .input-group, .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        input, button {
+            padding: 0.5rem;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        #todo_display {
+            margin-top: 1rem;
+        }
+        .todo-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem;
+            border-bottom: 1px solid #eee;
+        }
+        .todo-item:last-child {
+            border-bottom: none;
+        }
+        .todo-item button {
+            padding: 0.25rem 0.5rem;
+        }
+        .completed {
+            text-decoration: line-through;
+            color: #888;
+        }
+        .dark-mode {
+            background-color: #333;
+            color: #f5f5f5;
+        }
+        .dark-mode button {
+            background-color: #555;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Advanced Todo App</h1>
+        <div class="input-group">
+            <input type="text" id="todo_title" placeholder="Enter todo title">
+            <input type="text" id="todo_desc" placeholder="Enter todo description">
+        </div>
+        <div class="button-group">
+            <button onclick="addTodo()">Add Todo</button>
+            <button onclick="toggleDarkMode()">Toggle Dark Mode</button>
+        </div>
+        <select id="filter" onchange="filterTasks()">
+            <option value="all">All</option>
+            <option value="completed">Completed</option>
+            <option value="pending">Pending</option>
+        </select>
+        <div id="todo_display"></div>
+    </div>
+
+    <script>
+        const todos = JSON.parse(localStorage.getItem('todos')) || [];
+        const darkModeEnabled = JSON.parse(localStorage.getItem('darkMode')) || false;
+
+        // Initialize theme
+        if (darkModeEnabled) toggleDarkMode(true);
+
+        function addTodo() {
+            const title = document.getElementById('todo_title').value.trim();
+            const desc = document.getElementById('todo_desc').value.trim();
+
+            // Input validation and XSS prevention
+            if (!title) {
+                alert('Task title cannot be empty');
+                return;
+            }
+            if (todos.some(todo => todo.title === title)) {
+                alert('Task title must be unique');
+                return;
+            }
+            const task = {
+                id: Date.now(),
+                title: sanitize(title),
+                desc: sanitize(desc),
+                completed: false
+            };
+            todos.push(task);
+            saveAndRenderTodos();
+            document.getElementById('todo_title').value = '';
+            document.getElementById('todo_desc').value = '';
+        }
+
+        function sanitize(input) {
+            const element = document.createElement('div');
+            element.innerText = input;
+            return element.innerHTML;
+        }
+
+        function toggleCompletion(id) {
+            const task = todos.find(todo => todo.id === id);
+            task.completed = !task.completed;
+            saveAndRenderTodos();
+        }
+
+        function removeTodo(id) {
+            const index = todos.findIndex(todo => todo.id === id);
+            todos.splice(index, 1);
+            saveAndRenderTodos();
+        }
+
+        function toggleDarkMode(initialLoad = false) {
+            document.body.classList.toggle('dark-mode');
+            if (!initialLoad) {
+                localStorage.setItem('darkMode', JSON.stringify(document.body.classList.contains('dark-mode')));
+            }
+        }
+
+        function saveAndRenderTodos() {
+            localStorage.setItem('todos', JSON.stringify(todos));
+            renderTodos();
+        }
+
+        function renderTodos(filter = 'all') {
+            const todoDisplay = document.getElementById('todo_display');
+            todoDisplay.innerHTML = '';
+            const filteredTodos = todos.filter(todo => {
+                if (filter === 'completed') return todo.completed;
+                if (filter === 'pending') return !todo.completed;
+                return true;
+            });
+            filteredTodos.forEach(todo => {
+                const todoItem = document.createElement('div');
+                todoItem.classList.add('todo-item');
+                if (todo.completed) todoItem.classList.add('completed');
+                
+                todoItem.innerHTML = `
+                    <span>${todo.title} - ${todo.desc}</span>
+                    <div>
+                        <button onclick="toggleCompletion(${todo.id})">${todo.completed ? 'Undo' : 'Complete'}</button>
+                        <button onclick="removeTodo(${todo.id})">Delete</button>
+                    </div>
+                `;
+                todoDisplay.appendChild(todoItem);
+            });
+        }
+
+        function filterTasks() {
+            const filter = document.getElementById('filter').value;
+            renderTodos(filter);
+        }
+
+        // Initial render
+        renderTodos();
+
+    </script>
+</body>
+</html>
